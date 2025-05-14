@@ -2,3 +2,4 @@ Torch
 Flask
 Flask-Mail
 Tensorflow
+transformers
