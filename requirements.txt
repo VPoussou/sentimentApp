@@ -2,4 +2,5 @@ Torch
 Flask
 Flask-Mail
 Tensorflow
-transformers
+transformers 
+tf-keras
