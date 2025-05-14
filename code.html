@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment Emotion Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* For loading spinner */
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Comment Emotion Analyzer</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">Understand the sentiment behind guest reviews and craft perfect responses</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Input Section -->
+            <div class="lg:w-1/2 bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Analyze a Comment</h2>
+                
+                <div class="mb-6">
+                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">Paste the guest comment below</label>
+                    <textarea id="comment" rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="The place was amazing! The host was very responsive and the location was perfect..."></textarea>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500">Example comments:</span>
+                        <button onclick="loadExample('positive')" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200">Positive</button>
+                        <button onclick="loadExample('negative')" class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded hover:bg-red-200">Negative</button>
+                        <button onclick="loadExample('neutral')" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded hover:bg-yellow-200">Neutral</button>
+                    </div>
+                    <button id="analyzeButton" onclick="analyzeComment()" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition flex items-center pulse">
+                        <i class="fas fa-magic mr-2"></i> Analyze
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="lg:w-1/2">
+                <!-- Emotion Card -->
+                <div id="emotionCard" class="bg-white rounded-xl shadow-lg p-6 mb-6 hidden fade-in">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Emotion Analysis</h2>
+                    
+                    <div class="flex items-center mb-4">
+                        <div id="emotionIcon" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4">
+                            <!-- Icon will be inserted here -->
+                        </div>
+                        <div>
+                            <h3 id="emotionTitle" class="font-medium text-lg">Emotion</h3>
+                            <p id="emotionSubtitle" class="text-sm text-gray-500">Confidence: --%</p>
+                        </div>
+                    </div>
+                    
+                    <div id="errorDisplay" class="text-red-600 text-sm mb-4 hidden"></div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Key Phrases (from API if available)</h4>
+                        <div id="keyPhrases" class="flex flex-wrap gap-2">
+                            <!-- Key phrases will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Response Suggestions -->
+                <div id="responseCard" class="bg-white rounded-xl shadow-lg p-6 hidden fade-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-700">Suggested Responses</h2>
+                        <button onclick="regenerateResponses()" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                            <i class="fas fa-sync-alt mr-1"></i> Regenerate
+                        </button>
+                    </div>
+                    
+                    <div id="responseTabs" class="flex border-b border-gray-200 mb-4">
+                        <!-- Tabs will be inserted here -->
+                    </div>
+                    
+                    <div id="responseContent" class="min-h-40">
+                        <!-- Response content will be inserted here -->
+                    </div>
+                    
+                    <div class="mt-4 flex justify-end">
+                        <button onclick="copyResponse()" class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg mr-2">
+                            <i class="far fa-copy mr-1"></i> Copy
+                        </button>
+                        <button onclick="useResponse()" class="text-sm gradient-bg text-white px-4 py-2 rounded-lg">
+                            <i class="far fa-check-circle mr-1"></i> Use This Response
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Analyses -->
+        <div class="mt-12">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Recent Analyses</h2>
+            <div id="recentAnalysesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically filled or predefined -->
+                 <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                    <p class="text-gray-600 text-sm mb-2">"Loved the stay! The view was breathtaking."</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Positive</span>
+                        <span class="text-xs text-gray-500">Example</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Example comments
+        const examples = {
+            positive: "The apartment was even better than the photos! The host was incredibly responsive and went above and beyond to make our stay comfortable. The location was perfect - close to all the main attractions but still quiet at night. We'll definitely be back!",
+            negative: "I was very disappointed with my stay. The apartment wasn't clean when we arrived, with dirty sheets and dust everywhere. The wifi didn't work for our entire stay despite multiple requests to fix it. The host was unresponsive to our messages after we checked in.",
+            neutral: "The apartment was as described in the listing. The location was convenient for our needs. The check-in process was smooth, though we didn't have much interaction with the host during our stay. Everything was fine but nothing particularly stood out."
+        };
+
+        // Emotion data (used as fallback or if API doesn't provide detailed styling)
+        const emotions = {
+            positive: {
+                title: "Positive 😊",
+                subtitlePrefix: "Confidence:", // API might provide exact confidence
+                icon: "fa-face-smile-beam",
+                color: "bg-green-100 text-green-600",
+                phrases: ["great experience", "highly recommend", "loved it"] // Placeholder
+            },
+            negative: {
+                title: "Negative 😞",
+                subtitlePrefix: "Confidence:",
+                icon: "fa-face-frown",
+                color: "bg-red-100 text-red-600",
+                phrases: ["disappointed", "not good", "issues found"] // Placeholder
+            },
+            neutral: {
+                title: "Neutral 😐",
+                subtitlePrefix: "Confidence:",
+                icon: "fa-face-meh",
+                color: "bg-yellow-100 text-yellow-600",
+                phrases: ["it was okay", "as expected", "no major issues"] // Placeholder
+            },
+            mixed: { // Comprehend can return "MIXED"
+                title: "Mixed 🤔",
+                subtitlePrefix: "Confidence:",
+                icon: "fa-question-circle", // Example icon for mixed
+                color: "bg-purple-100 text-purple-600", // Example color for mixed
+                phrases: ["some good, some bad", "mixed feelings"] // Placeholder
+            }
+        };
+
+        // Response templates (these remain client-side for now)
+        const responses = {
+            positive: [
+                { title: "Grateful", content: "Thank you so much for your wonderful review! We're thrilled to hear you enjoyed your stay. We'd love to welcome you back anytime!"},
+                { title: "Personal", content: "Hi [Guest Name], your kind words mean the world to us! We're so happy we could make your stay memorable. Hope to host you again!"}
+            ],
+            negative: [
+                { title: "Apologetic", content: "We sincerely apologize for the issues you experienced. This is not our standard, and we've addressed this with our team. We'd appreciate the opportunity to make it up to you."},
+                { title: "Solution-Oriented", content: "Dear [Guest Name], we're truly sorry your experience didn't meet expectations. We'd like to offer [solution/compensation]. We hope you'll give us another chance."}
+            ],
+            neutral: [
+                { title: "Appreciative", content: "Thank you for your feedback! We're glad the stay met your needs. We appreciate you taking the time to share your thoughts."},
+                { title: "Engaging", content: "Hi [Guest Name], thanks for your review! If there's anything we could have done to make your experience more memorable, we'd love to hear your suggestions."}
+            ],
+            mixed: [ // Add responses for mixed sentiment
+                { title: "Understanding", content: "Thank you for your honest feedback. We appreciate you highlighting both the positives and areas for improvement. We'll work on [addressing negative points]."},
+                { title: "Balanced", content: "Hi [Guest Name], we're glad to hear you enjoyed [positive aspect] and we take your comments about [negative aspect] seriously. We're always striving to improve."}
+            ]
+        };
+
+        function loadExample(type) {
+            document.getElementById('comment').value = examples[type];
+        }
+
+        // --- MODIFIED analyzeComment FUNCTION ---
+        async function analyzeComment() {
+            const commentText = document.getElementById('comment').value;
+            if (!commentText.trim()) {
+                alert("Please enter a comment to analyze.");
+                return;
+            }
+
+            const analyzeButton = document.getElementById('analyzeButton');
+            const originalButtonHTML = analyzeButton.innerHTML;
+            const apiUrl = 'https://fxib5ip97l.execute-api.us-east-1.amazonaws.com/SentimentAnalysis';
+            const errorDisplay = document.getElementById('errorDisplay');
+
+            analyzeButton.disabled = true;
+            analyzeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+            errorDisplay.classList.add('hidden');
+            errorDisplay.textContent = '';
+            
+            // Hide previous results gently
+            document.getElementById('emotionCard').classList.add('hidden');
+            document.getElementById('responseCard').classList.add('hidden');
+
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 'Accept': 'application/json' // Good practice, but optional for this simple case
+                    },
+                    body: JSON.stringify({
+                        text: commentText,
+                        lang: "en" // As requested
+                    })
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Error: ${response.status} ${response.statusText}`;
+                    try {
+                        const errData = await response.json(); // Try to parse error from API
+                        errorMsg = errData.error || errData.message || JSON.stringify(errData);
+                    } catch (e) {
+                        // If error response isn't JSON, use the status text
+                    }
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                // Your Lambda returns: {'statusCode': 200, 'body': json.dumps({'sentiment': sentiment})}
+                // API Gateway Proxy Integration sends this to client as: { "sentiment": "SENTIMENT_VALUE" }
+                // OR if Lambda returns 'body': "SENTIMENT_VALUE" (just the string) then data will be the string
+                
+                let apiSentiment;
+                if (data && data.sentiment) {
+                    apiSentiment = data.sentiment; // e.g., "POSITIVE"
+                } else if (typeof data === 'string') { // If API Gateway or Lambda returned the sentiment string directly in body
+                    apiSentiment = data;
+                } else {
+                    throw new Error("Unexpected API response format. Sentiment not found.");
+                }
+
+                const emotionType = apiSentiment.toLowerCase(); // "positive", "negative", "neutral", "mixed"
+
+                if (emotions[emotionType]) {
+                    showAnalysis(emotionType, data); // Pass full data if you want to use confidence scores etc.
+                } else {
+                    console.warn("Unknown sentiment type from API:", emotionType);
+                    showAnalysis('neutral', { sentiment: apiSentiment }); // Fallback to neutral or show raw
+                }
+
+            } catch (error) {
+                console.error('Analysis API call failed:', error);
+                errorDisplay.textContent = `Failed to analyze: ${error.message}. Please ensure the API is reachable and CORS is configured if running locally.`;
+                errorDisplay.classList.remove('hidden');
+                // Optionally show a default error state in the emotion card
+                showErrorInEmotionCard(error.message);
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.innerHTML = originalButtonHTML;
+            }
+        }
+        // --- END MODIFIED analyzeComment FUNCTION ---
+
+        function showErrorInEmotionCard(errorMessage) {
+            const emotionCard = document.getElementById('emotionCard');
+            const emotionIconEl = document.getElementById('emotionIcon');
+            const emotionTitleEl = document.getElementById('emotionTitle');
+            const emotionSubtitleEl = document.getElementById('emotionSubtitle');
+            const keyPhrasesContainer = document.getElementById('keyPhrases');
+
+            emotionIconEl.className = 'w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4 bg-red-100 text-red-600';
+            emotionIconEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i>`;
+            emotionTitleEl.textContent = "Analysis Error";
+            emotionSubtitleEl.textContent = "Could not retrieve sentiment";
+            keyPhrasesContainer.innerHTML = `<p class="text-xs text-red-700">${errorMessage}</p>`;
+            
+            emotionCard.classList.remove('hidden');
+            document.getElementById('responseCard').classList.add('hidden');
+        }
+
+
+        // Show analysis results
+        // Modified to accept full API data if needed, though currently only uses type
+        function showAnalysis(type, apiData = {}) {
+            const emotionCard = document.getElementById('emotionCard');
+            const responseCard = document.getElementById('responseCard');
+            const errorDisplay = document.getElementById('errorDisplay');
+            errorDisplay.classList.add('hidden'); // Hide error if successful
+
+            const emotionData = emotions[type] || emotions.neutral; // Fallback to neutral if type unknown
+            const emotionIconEl = document.getElementById('emotionIcon');
+            
+            emotionIconEl.className = `w-12 h-12 rounded-full flex items-center justify-center text-2xl mr-4 ${emotionData.color}`;
+            emotionIconEl.innerHTML = `<i class="fas ${emotionData.icon}"></i>`;
+            
+            document.getElementById('emotionTitle').textContent = emotionData.title;
+            // You could use apiData.SentimentScore.Positive * 100 if your Lambda returns it
+            // For now, keeping the mock subtitle logic
+            let confidenceText = "Confidence: --%";
+            if (apiData.SentimentScore) {
+                const score = apiData.SentimentScore[type.charAt(0).toUpperCase() + type.slice(1)];
+                if (score !== undefined) {
+                     confidenceText = `Confidence: ${(score * 100).toFixed(0)}%`;
+                }
+            } else if (type === "positive" || type === "negative" || type === "neutral") {
+                // Fallback to old static subtitles if no score from API for some reason
+                 confidenceText = emotions[type].subtitle || "Confidence: --%";
+            }
+
+            document.getElementById('emotionSubtitle').textContent = confidenceText;
+            
+            // Add key phrases (using placeholders for now, API doesn't provide this yet)
+            const keyPhrasesContainer = document.getElementById('keyPhrases');
+            keyPhrasesContainer.innerHTML = ''; // Clear previous
+            
+            // If your API returned key phrases, you would populate them here
+            // e.g., if (apiData.KeyPhrases) { apiData.KeyPhrases.forEach(...) }
+            // For now, using the static ones from the 'emotions' object for demo
+            (emotionData.phrases || []).forEach(phrase => {
+                const span = document.createElement('span');
+                span.className = 'text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded';
+                span.textContent = phrase;
+                keyPhrasesContainer.appendChild(span);
+            });
+            
+            emotionCard.classList.remove('hidden');
+            responseCard.classList.remove('hidden');
+            
+            generateResponseTabs(type);
+            addRecentAnalysis(document.getElementById('comment').value, type);
+        }
+
+        function addRecentAnalysis(commentText, sentimentType) {
+            const container = document.getElementById('recentAnalysesContainer');
+            const analysisDiv = document.createElement('div');
+            const sentimentData = emotions[sentimentType] || emotions.neutral;
+            let borderColorClass = 'border-gray-500'; // Default
+            let bgColorClass = 'bg-gray-100';
+            let textColorClass = 'text-gray-800';
+
+            if (sentimentType === 'positive') {
+                borderColorClass = 'border-green-500';
+                bgColorClass = 'bg-green-100';
+                textColorClass = 'text-green-800';
+            } else if (sentimentType === 'negative') {
+                borderColorClass = 'border-red-500';
+                bgColorClass = 'bg-red-100';
+                textColorClass = 'text-red-800';
+            } else if (sentimentType === 'neutral') {
+                borderColorClass = 'border-yellow-500';
+                bgColorClass = 'bg-yellow-100';
+                textColorClass = 'text-yellow-800';
+            } else if (sentimentType === 'mixed') {
+                borderColorClass = 'border-purple-500'; // Example for mixed
+                bgColorClass = 'bg-purple-100';
+                textColorClass = 'text-purple-800';
+            }
+
+
+            analysisDiv.className = `bg-white p-4 rounded-lg shadow border-l-4 ${borderColorClass}`;
+            analysisDiv.innerHTML = `
+                <p class="text-gray-600 text-sm mb-2 truncate" title="${commentText}">${commentText.substring(0, 70) + (commentText.length > 70 ? '...' : '')}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs ${bgColorClass} ${textColorClass} px-2 py-1 rounded-full">${sentimentData.title.split(' ')[0]}</span>
+                    <span class="text-xs text-gray-500">Just now</span>
+                </div>
+            `;
+            // Add to the beginning of the list
+            if (container.firstChild) {
+                container.insertBefore(analysisDiv, container.firstChild);
+            } else {
+                container.appendChild(analysisDiv);
+            }
+
+            // Keep only the latest N analyses (e.g., 3 or 6)
+            while (container.children.length > 3) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+
+        function generateResponseTabs(type) {
+            const tabsContainer = document.getElementById('responseTabs');
+            const contentContainer = document.getElementById('responseContent');
+            
+            tabsContainer.innerHTML = '';
+            contentContainer.innerHTML = '';
+            
+            const responseData = responses[type] || responses.neutral; // Fallback
+            
+            responseData.forEach((response, index) => {
+                const tab = document.createElement('button');
+                tab.className = `px-4 py-2 text-sm font-medium ${index === 0 ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`;
+                tab.textContent = response.title;
+                tab.onclick = () => switchResponseTab(index, responseData);
+                tabsContainer.appendChild(tab);
+                
+                if (index === 0) {
+                    const content = document.createElement('div');
+                    content.className = 'text-gray-700';
+                    content.innerHTML = `<p>${response.content.replace(/\[Guest Name\]/g, 'Guest')}</p>`; // Basic placeholder replacement
+                    contentContainer.appendChild(content);
+                }
+            });
+        }
+
+        function switchResponseTab(index, responseData) {
+            const tabs = document.querySelectorAll('#responseTabs button');
+            const contentContainer = document.getElementById('responseContent');
+            
+            tabs.forEach((tab, i) => {
+                tab.className = `px-4 py-2 text-sm font-medium ${i === index ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`;
+            });
+            
+            contentContainer.innerHTML = `<p>${responseData[index].content.replace(/\[Guest Name\]/g, 'Guest')}</p>`;
+        }
+
+        // Regenerate responses (mock - could also re-call a different API or cycle through client-side templates)
+        function regenerateResponses() {
+            const contentContainer = document.getElementById('responseContent');
+            contentContainer.innerHTML = '<div class="flex justify-center items-center h-40"><i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i></div>';
+            
+            setTimeout(() => {
+                const currentSentiment = document.getElementById('emotionTitle').textContent.split(' ')[0].toLowerCase();
+                 // Ensure the sentiment string matches keys in 'responses' object (e.g. "positive", "negative")
+                let sentimentKey = currentSentiment;
+                if (currentSentiment === "positive😊") sentimentKey = "positive";
+                else if (currentSentiment === "negative😞") sentimentKey = "negative";
+                else if (currentSentiment === "neutral😐") sentimentKey = "neutral";
+                else if (currentSentiment === "mixed🤔") sentimentKey = "mixed";
+
+
+                if (responses[sentimentKey]) {
+                    // Simple "regeneration": pick a different template if available, or just reload current
+                    // For a real app, this could involve more logic or another API call
+                    const responseData = responses[sentimentKey];
+                    const currentResponseText = document.querySelector('#responseContent p')?.textContent;
+                    let nextIndex = 0;
+                    if (responseData.length > 1) {
+                        const currentIndex = responseData.findIndex(r => r.content.replace(/\[Guest Name\]/g, 'Guest') === currentResponseText);
+                        nextIndex = (currentIndex + 1) % responseData.length;
+                    }
+                    generateResponseTabs(sentimentKey); // Regenerates with the first tab active
+                    if(responseData.length > 1) switchResponseTab(nextIndex, responseData); // Switch to next if available
+
+                } else {
+                     generateResponseTabs("neutral"); // Fallback
+                }
+
+            }, 1000);
+        }
+
+        function copyResponse() {
+            const content = document.querySelector('#responseContent p')?.textContent;
+            if (!content) return;
+
+            navigator.clipboard.writeText(content).then(() => {
+                const button = event.target.closest('button');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check mr-1"></i> Copied!';
+                button.classList.add('bg-green-100', 'text-green-800');
+                button.classList.remove('bg-gray-100');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('bg-green-100', 'text-green-800');
+                    button.classList.add('bg-gray-100');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy text.');
+            });
+        }
+
+        function useResponse() {
+            copyResponse(); // First copy it
+            // In a real app, this might paste it into another input field or trigger another action
+            setTimeout(() => alert('Response copied and ready to use!'), 100); // Slight delay for copy feedback
+        }
+
+        // Initialize with a default example if desired, or clear comment box
+        // document.addEventListener('DOMContentLoaded', () => {
+        //    loadExample('positive'); // Optional: load an example on page load
+        // });
+
+    </script>
+</body>
+</html>
