@@ -177,10 +177,11 @@
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Authorization': 'Bearer 1234'
                     },
-                    body: JSON.stringify({ comment: comment })
+                    body: JSON.stringify({ "comment": comment },
+
+                    )
                 });
                 
                 if (!response.ok) {

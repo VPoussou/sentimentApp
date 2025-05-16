@@ -4,3 +4,4 @@ Flask-Mail
 Tensorflow
 transformers 
 tf-keras
+flask-cors

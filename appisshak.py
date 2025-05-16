@@ -2,9 +2,10 @@ from flask import Flask, request, render_template, jsonify
 from flask_mail import Mail, Message
 from transformers import pipeline
 import os
-
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 app.config['MAIL_USERNAME'] = ''
 app.config['MAIL_PASSWORD'] = ''  
