@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Comments - Sentiment Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sentiment-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #ef4444, #f59e0b, #10b981);
+        }
+        
+        .sentiment-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            position: absolute;
+            top: -4px;
+            transform: translateX(-50%);
+            border: 2px solid white;
+        }
+        
+        .comment-card {
+            transition: all 0.3s ease;
+        }
+        
+        .comment-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Product Feedback</h1>
+            <p class="text-gray-600">Share your thoughts about our product</p>
+        </header>
+        
+        <!-- Comment Form -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Add your comment</h2>
+            <form id="commentForm" class="space-y-4">
+                <div>
+                    <textarea 
+                        id="commentInput" 
+                        rows="4" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" 
+                        placeholder="How do you feel about this product?"
+                        required></textarea>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        <p>Thank you for sharing your thoughts !</p>
+                    </div>
+                    <button 
+                        type="submit" 
+                        id="submitBtn"
+                        class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                        Post Comment
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Comments Section -->
+        <div class="space-y-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Customer Feedback</h2>
+            
+            <!-- Loading State -->
+            <div id="loadingComments" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+                <p class="text-gray-600">Loading comments...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyComments" class="hidden text-center py-12 bg-white rounded-lg shadow-sm">
+                <i class="fas fa-comment-slash text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-700 mb-1">No comments yet</h3>
+                <p class="text-gray-500">Be the first to share your thoughts!</p>
+            </div>
+            
+            <!-- Comments Container -->
+            <div id="commentsContainer" class="space-y-4">
+                <!-- Sample comment (will be replaced by JS) -->
+                <div class="comment-card bg-white rounded-lg shadow-sm p-5">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800">Anonymous User</p>
+                                <p class="text-xs text-gray-500">Just now</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Positive
+                            </span>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 mb-4">This product is amazing! I love how it works and the quality is outstanding.</p>
+                    <div class="relative mb-1">
+                        <div class="sentiment-bar"></div>
+                        <div class="sentiment-indicator bg-green-500" style="left: 85%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Negative</span>
+                        <span>Neutral</span>
+                        <span>Positive</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const commentForm = document.getElementById('commentForm');
+            const commentInput = document.getElementById('commentInput');
+            const commentsContainer = document.getElementById('commentsContainer');
+            const loadingComments = document.getElementById('loadingComments');
+            const emptyComments = document.getElementById('emptyComments');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Hide sample comment and show empty state initially
+            commentsContainer.innerHTML = '';
+            emptyComments.classList.remove('hidden');
+            
+            commentForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const commentText = commentInput.value.trim();
+                if (!commentText) return;
+                
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+                
+                try {
+                    const response = await analyzeSentiment(commentText);
+                    
+                    // Add new comment to the top
+                    addCommentToUI(commentText, response.sentiment, response.score);
+                    
+                    // Clear input
+                    commentInput.value = '';
+                    
+                    // Hide empty state if it's the first comment
+                    emptyComments.classList.add('hidden');
+                } catch (error) {
+                    console.error('Error analyzing sentiment:', error);
+                    alert('Failed to analyze sentiment. Please try again.');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Post Comment';
+                }
+            });
+            
+            async function analyzeSentiment(comment) {
+                const apiUrl = 'http://35.181.192.30:8080/analyze_sentiment';
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer 1234'
+                    },
+                    body: JSON.stringify({ comment: comment })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            }
+            
+            function addCommentToUI(commentText, sentiment, score) {
+                const commentId = Date.now();
+                const sentimentClass = {
+                    'positive': 'bg-green-100 text-green-800',
+                    'mixed': 'bg-yellow-100 text-yellow-800',
+                    'negative': 'bg-red-100 text-red-800'
+                };
+                
+                const sentimentColor = {
+                    'positive': 'bg-green-500',
+                    'neutral': 'bg-yellow-500',
+                    'negative': 'bg-red-500'
+                };
+                
+                // Calculate position on sentiment bar (0-100%)
+                let sentimentPosition = 50; // neutral default
+                if (sentiment === 'positive') {
+                    sentimentPosition = 50 + (score * 50); // 50-100%
+                } else if (sentiment === 'negative') {
+                    sentimentPosition = 50 - (score * 50); // 0-50%
+                }
+                
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment-card bg-white rounded-lg shadow-sm p-5';
+                commentElement.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800">Anonymous User</p>
+                                <p class="text-xs text-gray-500">Just now</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${sentimentClass[sentiment]}">
+                                ${sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
+                            </span>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 mb-4">${commentText}</p>
+                    <div class="relative mb-1">
+                        <div class="sentiment-bar"></div>
+                        <div class="sentiment-indicator ${sentimentColor[sentiment]}" style="left: ${sentimentPosition}%;"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Negative</span>
+                        <span>Neutral</span>
+                        <span>Positive</span>
+                    </div>
+                `;
+                
+                // Add to the top of comments container
+                if (commentsContainer.firstChild) {
+                    commentsContainer.insertBefore(commentElement, commentsContainer.firstChild);
+                } else {
+                    commentsContainer.appendChild(commentElement);
+                }
+                
+                // Add animation for new comment
+                commentElement.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => {
+                    commentElement.classList.remove('opacity-0', 'translate-y-4');
+                    commentElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                }, 10);
+            }
+            
+            // Example of loading existing comments (simulated)
+            function loadSampleComments() {
+                loadingComments.classList.remove('hidden');
+                emptyComments.classList.add('hidden');
+                
+                setTimeout(() => {
+                    loadingComments.classList.add('hidden');
+                    
+                    // Add some sample comments
+                    const sampleComments = [
+                        {
+                            text: "I'm very satisfied with this product. It exceeded my expectations!",
+                            sentiment: "positive",
+                            score: 0.9
+                        },
+                        {
+                            text: "The product is okay, but the shipping took too long.",
+                            sentiment: "neutral",
+                            score: 0.2
+                        },
+                        {
+                            text: "Not what I expected. The quality is poor for the price.",
+                            sentiment: "negative",
+                            score: 0.8
+                        }
+                    ];
+                    
+                    sampleComments.forEach(comment => {
+                        addCommentToUI(comment.text, comment.sentiment, comment.score);
+                    });
+                }, 1500);
+            }
+            
+            // Uncomment to load sample comments on page load
+            // loadSampleComments();
+        });
+    </script>
+</body>
+</html>
