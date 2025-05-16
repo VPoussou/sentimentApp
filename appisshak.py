@@ -14,7 +14,7 @@ app.config['MAIL_PORT'] = 465  # Utilisation du port SSL
 app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
 
-API_TOKEN = ""
+API_TOKEN = "1234"
 
 @app.before_request
 def check_token():
