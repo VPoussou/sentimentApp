@@ -7,8 +7,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-app.config['MAIL_USERNAME'] = ''
-app.config['MAIL_PASSWORD'] = ''  
+app.config['MAIL_USERNAME'] = 'ishakamine76@gmail.com'
+app.config['MAIL_PASSWORD'] = 'kgal eekn xtkg kqiu'  
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465  # Utilisation du port SSL
 app.config['MAIL_USE_SSL'] = True
@@ -111,8 +111,8 @@ def analyze_sentiment():
     # Si le sentiment est négatif, envoyer un email d'alerte
     if sentiment == 'NEGATIVE':
         msg = Message('Alerte de sentiment négatif !',
-                      sender='',  # Ton adresse email
-                      recipients=[''])  # L'adresse email où envoyer l'alerte
+                      sender='ishakamine76@gmail.com',  # Ton adresse email
+                      recipients=['ishakamine20@gmail.com'])  # L'adresse email où envoyer l'alerte
         msg.body = f"Un commentaire négatif a été soumis :\n\nCommentaire : {comment}"
         mail.send(msg)
 
